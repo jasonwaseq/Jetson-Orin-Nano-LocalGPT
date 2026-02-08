@@ -101,44 +101,41 @@ localgpt
 
 Terminal Commands   
 /help          show help   
-/mode coding   coding assistant   
-/mode tutor    tutoring mode
-/mode snark    playful mode
-/save          save current chat
-/list          list saved chats
-/load <id>     load saved session
-/temp 0.2      adjust randomness
-/ctx 8000      change context size
-/exit          quit
+/mode coding   coding assistant    
+/mode tutor    tutoring mode    
+/mode snark    playful mode   
+/save          save current chat   
+/list          list saved chats   
+/load <id>     load saved session   
+/temp 0.2      adjust randomness   
+/ctx 8000      change context size   
+/exit          quit   
 
-## Optional: Auto-Start on Boot (systemd)
+## Optional: Auto-Start on Boot (systemd)   
 
-Create the service file:
+Create the service file:   
 
-sudo nano /etc/systemd/system/localgpt-llama.service
+sudo nano /etc/systemd/system/localgpt-llama.service   
 
-[Unit]
-Description=LocalGPT llama.cpp server
-After=network.target
+[Unit]   
+Description=LocalGPT llama.cpp server   
+After=network.target   
 
-[Service]
-Type=simple
-User=USERNAME
-WorkingDirectory=/home/USERNAME/localgpt
-EnvironmentFile=/home/USERNAME/localgpt/config.env
-ExecStart=/home/USERNAME/localgpt/run_server.sh
-Restart=always
-RestartSec=2
+[Service]   
+Type=simple   
+User=USERNAME   
+WorkingDirectory=/home/USERNAME/localgpt   
+EnvironmentFile=/home/USERNAME/localgpt/config.env   
+ExecStart=/home/USERNAME/localgpt/run_server.sh   
+Restart=always   
+RestartSec=2   
 
-[Install]
-WantedBy=multi-user.target
+[Install]   
+WantedBy=multi-user.target   
 
+# Enable:   
+sudo systemctl daemon-reload   
+sudo systemctl enable --now localgpt-llama.service   
 
-# Enable:
-
-sudo systemctl daemon-reload
-sudo systemctl enable --now localgpt-llama.service
-
-Check status:
-
-systemctl status localgpt-llama.service
+Check status:   
+systemctl status localgpt-llama.service   
