@@ -1,8 +1,6 @@
 # LocalGPT (Jetson Orin Nano)
 
-LocalGPT is a fully offline, GPU-accelerated “ChatGPT-style” assistant that runs entirely on an NVIDIA Jetson Orin Nano. It uses **llama.cpp with CUDA acceleration** to run a local Large Language Model (Llama 3.2 3B GGUF) and provides an interactive, streaming terminal interface with chat history, session saving/loading, and multiple prompt modes.
-
-All inference happens locally on the Jetson — **no cloud APIs, no internet required at runtime**. This project demonstrates real-world edge AI deployment by combining embedded systems, GPU acceleration, and modern LLM tooling into a polished, user-facing application.
+LocalGPT on Jetson Orin Nano is a fully offline, GPU-accelerated large language model system built for edge deployment. The project uses llama.cpp with CUDA acceleration to run a Llama 3.2 3B GGUF model entirely on an NVIDIA Jetson Orin Nano, providing an interactive, ChatGPT-style terminal interface with real-time streaming responses, persistent chat sessions, and configurable prompt modes. The system is designed as a production-ready application, featuring automatic server startup, systemd integration, and robust process management, demonstrating practical experience in embedded Linux, GPU-accelerated inference, and end-to-end AI system integration without reliance on cloud services.
 
 ---
 
