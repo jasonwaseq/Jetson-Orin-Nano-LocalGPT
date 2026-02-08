@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+
+# Local config (users must create their own)
+config.env
+
+# Logs
+server.log
+
+# OS junk
+.DS_Store
