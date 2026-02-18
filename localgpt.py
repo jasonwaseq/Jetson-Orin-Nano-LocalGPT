@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import json
 import time
-import urllib.request
-import urllib.error
 import os
+import requests
+from typing import List, Dict, Generator, Any, Optional
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = os.environ.get("PORT", "8080")
 URL = f"http://{HOST}:{PORT}/completion"
@@ -29,33 +29,33 @@ MODES = {
     "snark":   "You are witty and playful, but still helpful.",
 }
 
-STOP_STRINGS = ["<|im_end|>"]
+STOP_STRINGS = ["<|eot_id|>", "<|end_of_text|>"]
 
-def now_id():
+def now_id() -> str:
     return time.strftime("%Y%m%d-%H%M%S")
 
-def save_session(session_id: str, state: dict):
+def save_session(session_id: str, state: dict) -> Path:
     path = SESS / f"{session_id}.json"
     path.write_text(json.dumps(state, indent=2))
     return path
 
-def load_session(session_id: str):
+def load_session(session_id: str) -> dict:
     path = SESS / f"{session_id}.json"
     return json.loads(path.read_text())
 
-def list_sessions():
+def list_sessions() -> List[str]:
     files = sorted(SESS.glob("*.json"), reverse=True)
     return [f.stem for f in files]
 
-def build_prompt(system_prompt: str, turns: list[dict]):
-    # This matches the template your llama-server printed earlier.
-    p = f"<|im_start|>system\n{system_prompt}<|im_end|>\n"
+def build_prompt(system_prompt: str, turns: List[Dict[str, str]]) -> str:
+    # Llama 3 template
+    p = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|>"
     for t in turns:
-        p += f"<|im_start|>{t['role']}\n{t['content']}<|im_end|>\n"
-    p += "<|im_start|>assistant\n"
+        p += f"<|start_header_id|>{t['role']}<|end_header_id|>\n\n{t['content']}<|eot_id|>"
+    p += "<|start_header_id|>assistant<|end_header_id|>\n\n"
     return p
 
-def sse_stream_completion(prompt: str, n_predict=512, temperature=0.7):
+def sse_stream_completion(prompt: str, n_predict: int = 512, temperature: float = 0.7) -> Generator[str, None, None]:
     payload = {
         "prompt": prompt,
         "n_predict": n_predict,
@@ -63,37 +63,43 @@ def sse_stream_completion(prompt: str, n_predict=512, temperature=0.7):
         "stop": STOP_STRINGS,
         "stream": True,
     }
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        URL,
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "Accept-Encoding": "identity",  # avoid gzip issues
-        },
-        method="POST",
-    )
 
-    with urllib.request.urlopen(req, timeout=600) as r:
-        for raw in r:
-            if not raw:
+    retries = 3
+    last_error = None
+
+    for attempt in range(retries):
+        try:
+            with requests.post(URL, json=payload, stream=True, timeout=600) as r:
+                r.raise_for_status()
+                
+                for line in r.iter_lines():
+                    if not line:
+                        continue
+                    decoded_line = line.decode("utf-8", errors="ignore").strip()
+                    # SSE lines look like: "data: {...}"
+                    if not decoded_line.startswith("data:"):
+                        continue
+                    chunk = decoded_line[len("data:"):].strip()
+                    if not chunk:
+                        continue
+                    try:
+                        obj = json.loads(chunk)
+                    except Exception:
+                        continue
+                    if obj.get("stop") is True:
+                        break
+                    content = obj.get("content")
+                    if content:
+                        yield content
+            return # Success
+        except (requests.exceptions.RequestException, ConnectionRefusedError) as e:
+            last_error = e
+            if attempt < retries - 1:
+                time.sleep(1)
                 continue
-            line = raw.decode("utf-8", errors="ignore").strip()
-            # SSE lines look like: "data: {...}"
-            if not line.startswith("data:"):
-                continue
-            chunk = line[len("data:"):].strip()
-            if not chunk:
-                continue
-            try:
-                obj = json.loads(chunk)
-            except Exception:
-                continue
-            if obj.get("stop") is True:
-                break
-            content = obj.get("content")
-            if content:
-                yield content
+    
+    if last_error:
+        raise last_error
 
 def header(session_id, mode, temp, ctx_chars):
     t = Text()
@@ -250,7 +256,7 @@ def main():
             console.print("\n[dim](cancelled)[/dim]\n")
             # Don't append partial assistant message if cancelled
             continue
-        except (urllib.error.URLError, urllib.error.HTTPError) as e:
+        except requests.exceptions.RequestException as e:
             console.print(f"\n[red]API error:[/red] {e}\n")
             continue
 
